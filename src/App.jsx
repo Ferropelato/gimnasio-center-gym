@@ -15,7 +15,7 @@ function App() {
       <Navbar cartCount={cartCount} />
       <main className="main-layout">
         <ShopContainer
-          greeting="¡Bienvenido a React con Vite!"
+          greeting="Bienvenidos a Red de gimnasios Center Gym"
           subtext="Próximamente verás el catálogo completo aquí."
           onAddToCart={handleAddToCart}
         />

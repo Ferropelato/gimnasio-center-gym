@@ -13,7 +13,7 @@ function Navbar({ cartCount }) {
             e.currentTarget.src = '/vite.svg'
           }}
         />
-        <span className="logo-text">Gym Gear</span>
+        <span className="logo-text">Center Gym</span>
       </div>
 
       <nav className="navbar__links">

@@ -8,7 +8,7 @@ function ShopContainer({ greeting, subtext, onAddToCart }) {
 
   return (
     <section className="shop-container" id="home">
-      <h1>{greeting}</h1>
+      <h1 className="welcome-title">{greeting}</h1>
       {subtext && <p>{subtext}</p>}
 
       <div className="future-box">
