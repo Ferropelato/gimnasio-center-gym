@@ -1,9 +1,10 @@
+import { Link } from 'react-router-dom'
 import CartWidget from './CartWidget.jsx'
 
-function Navbar({ cartCount }) {
+function Navbar({ cartCount, onCartClick }) {
   return (
     <header className="navbar">
-      <div className="navbar__logo">
+      <Link to="/" className="navbar__logo">
         <img
           src="/logogym.png"
           alt="Logo"
@@ -14,15 +15,14 @@ function Navbar({ cartCount }) {
           }}
         />
         <span className="logo-text">Center Gym</span>
-      </div>
+      </Link>
 
       <nav className="navbar__links">
-        <a href="#home">Home</a>
-        <a href="#equipos">Equipos</a>
-        <a href="#planes">Planes</a>
+        <Link to="/" className="nav-link">Inicio</Link>
+        <Link to="/productos" className="nav-link">Productos</Link>
       </nav>
 
-      <CartWidget count={cartCount} />
+      <CartWidget count={cartCount} onClick={onCartClick} />
     </header>
   )
 }
