@@ -1,90 +1,123 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { CartProvider } from './context/CartContext.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import Navbar from './components/Navbar.jsx'
 import ShopContainer from './components/ShopContainer.jsx'
 import ItemListContainer from './components/ItemListContainer.jsx'
 import ItemDetailContainer from './components/ItemDetailContainer.jsx'
 import Cart from './components/Cart.jsx'
-import './index.css'
+import Login from './components/Auth/Login.jsx'
+import Register from './components/Auth/Register.jsx'
+import { onAuthChange, logoutUser } from './firebase/auth'
+import './index.scss'
 
 function App() {
-  const [cartItems, setCartItems] = useState([])
   const [isCartOpen, setIsCartOpen] = useState(false)
+  const [user, setUser] = useState(null)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [showAuth, setShowAuth] = useState(false)
+  const [authMode, setAuthMode] = useState('login') // 'login' or 'register'
 
-  const handleAddToCart = (product, quantity = 1) => {
-    setCartItems((prevItems) => {
-      const existingItem = prevItems.find(item => item.id === product.id)
-      
-      if (existingItem) {
-        const newQuantity = existingItem.quantity + quantity
-        if (newQuantity > product.stock) {
-          return prevItems
+  // Autenticación
+  useEffect(() => {
+    try {
+      // Verificar que onAuthChange esté disponible
+      if (typeof onAuthChange === 'function') {
+        const unsubscribe = onAuthChange((currentUser) => {
+          setUser(currentUser)
+          setAuthLoading(false)
+        })
+
+        // Timeout de seguridad: si después de 2 segundos no hay respuesta, continuar de todas formas
+        const timeout = setTimeout(() => {
+          setAuthLoading(false)
+        }, 2000)
+
+        return () => {
+          clearTimeout(timeout)
+          if (typeof unsubscribe === 'function') {
+            unsubscribe()
+          }
         }
-        return prevItems.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: newQuantity }
-            : item
-        )
       } else {
-        return [...prevItems, { ...product, quantity }]
+        // Si onAuthChange no está disponible, continuar sin autenticación
+        console.warn('⚠️ onAuthChange no está disponible, continuando sin autenticación')
+        setAuthLoading(false)
       }
-    })
-    setIsCartOpen(true)
-  }
+    } catch (error) {
+      console.error('Error en autenticación:', error)
+      setAuthLoading(false)
+    }
+  }, [])
 
-  const handleUpdateQuantity = (productId, newQuantity) => {
-    if (newQuantity < 1) return
-    
-    setCartItems((prevItems) => {
-      const item = prevItems.find(item => item.id === productId)
-      if (!item || newQuantity > item.stock) return prevItems
-      
-      return prevItems.map(item =>
-        item.id === productId
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    })
-  }
+  const handleLogout = useCallback(async () => {
+    const result = await logoutUser()
+    if (result.error) {
+      console.error('Error al cerrar sesión:', result.error)
+    }
+  }, [])
 
-  const handleRemoveItem = (productId) => {
-    setCartItems((prevItems) => prevItems.filter(item => item.id !== productId))
+  if (authLoading) {
+    return (
+      <div className="loading-container">
+        <p>Cargando...</p>
+      </div>
+    )
   }
-
-  const handleClearCart = () => {
-    setCartItems([])
-  }
-
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
 
   return (
-    <BrowserRouter>
-      <Navbar cartCount={cartCount} onCartClick={() => setIsCartOpen(true)} />
-      <main className="main-layout">
-        <Routes>
-          <Route 
-            path="/" 
-            element={<ShopContainer />} 
+    <ErrorBoundary>
+      <CartProvider>
+        <BrowserRouter>
+          <Navbar 
+            onCartClick={() => setIsCartOpen(true)}
+            user={user}
+            onLoginClick={() => {
+              setAuthMode('login')
+              setShowAuth(true)
+            }}
+            onLogout={handleLogout}
           />
-          <Route 
-            path="/productos" 
-            element={<ItemListContainer />} 
+          <main className="main-layout">
+            <Routes>
+              <Route 
+                path="/" 
+                element={<ShopContainer />} 
+              />
+              <Route 
+                path="/productos" 
+                element={<ItemListContainer />} 
+              />
+              <Route 
+                path="/category/:categoryId" 
+                element={<ItemListContainer />} 
+              />
+              <Route 
+                path="/item/:itemId" 
+                element={<ItemDetailContainer />} 
+              />
+            </Routes>
+          </main>
+          <Cart
+            onClose={() => setIsCartOpen(false)}
+            isOpen={isCartOpen}
           />
-          <Route 
-            path="/item/:itemId" 
-            element={<ItemDetailContainer onAddToCart={handleAddToCart} />} 
-          />
-        </Routes>
-      </main>
-      <Cart
-        cartItems={cartItems}
-        onUpdateQuantity={handleUpdateQuantity}
-        onRemoveItem={handleRemoveItem}
-        onClearCart={handleClearCart}
-        onClose={() => setIsCartOpen(false)}
-        isOpen={isCartOpen}
-      />
-    </BrowserRouter>
+          {showAuth && authMode === 'login' && (
+            <Login 
+              onClose={() => setShowAuth(false)}
+              onSwitchToRegister={() => setAuthMode('register')}
+            />
+          )}
+          {showAuth && authMode === 'register' && (
+            <Register 
+              onClose={() => setShowAuth(false)}
+              onSwitchToLogin={() => setAuthMode('login')}
+            />
+          )}
+        </BrowserRouter>
+      </CartProvider>
+    </ErrorBoundary>
   )
 }
 

@@ -1,44 +1,67 @@
-import { useState, useEffect } from 'react'
-import ItemCard from './ItemCard'
-import { products as productsData, getCategories } from '../data/products'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { NavLink, useParams } from 'react-router-dom'
+import ItemList from './ItemList'
+import { getAllProducts, getProductsByCategory, getCategories } from '../firebase/products'
 
 function ItemListContainer() {
   const [allProducts, setAllProducts] = useState([])
-  const [filteredProducts, setFilteredProducts] = useState([])
-  const [selectedCategory, setSelectedCategory] = useState('')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [categories, setCategories] = useState([])
+  const { categoryId } = useParams()
 
-  useEffect(() => {
+  const loadProducts = useCallback(async () => {
     setLoading(true)
-    
-    const loadProducts = new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(productsData)
-      }, 500)
-    })
+    setError(null)
 
-    loadProducts
-      .then((data) => {
-        setAllProducts(data)
-        setFilteredProducts(data)
-        setLoading(false)
-      })
-      .catch((error) => {
-        console.error('Error cargando productos:', error)
-        setLoading(false)
-      })
-  }, [])
+    try {
+      let result
+      if (categoryId) {
+        result = await getProductsByCategory(categoryId)
+      } else {
+        result = await getAllProducts()
+      }
+
+      // Solo mostrar error si no hay productos Y hay un error
+      if (result.error && (!result.products || result.products.length === 0)) {
+        setError(result.error)
+        setAllProducts([])
+      } else if (result.products && result.products.length > 0) {
+        // Si hay productos, no mostrar error aunque haya un mensaje de error menor
+        setAllProducts(result.products)
+        setError(null)
+      } else {
+        // Si no hay productos y no hay error específico
+        setAllProducts([])
+        setError('No se encontraron productos')
+      }
+
+      // Cargar categorías siempre (necesarias para los filtros)
+      try {
+        const categoriesResult = await getCategories()
+        if (!categoriesResult.error && categoriesResult.categories) {
+          setCategories(categoriesResult.categories)
+        }
+      } catch (catError) {
+        console.warn('Error cargando categorías:', catError)
+        // No bloquear si falla cargar categorías
+      }
+    } catch (err) {
+      console.error('Error cargando productos:', err)
+      setError(`Error al cargar los productos: ${err.message}`)
+      setAllProducts([])
+    } finally {
+      setLoading(false)
+    }
+  }, [categoryId])
 
   useEffect(() => {
-    if (selectedCategory === '') {
-      setFilteredProducts(allProducts)
-    } else {
-      const filtered = allProducts.filter(product => product.category === selectedCategory)
-      setFilteredProducts(filtered)
-    }
-  }, [selectedCategory, allProducts])
+    loadProducts()
+  }, [loadProducts])
 
-  const categories = getCategories()
+  const filteredProducts = useMemo(() => {
+    return allProducts
+  }, [allProducts])
   
   const categoryNames = {
     'remeras-hombre': 'Remeras Hombre',
@@ -58,39 +81,42 @@ function ItemListContainer() {
     )
   }
 
+  if (error) {
+    return (
+      <div className="error-container">
+        <p>Error: {error}</p>
+        <button onClick={loadProducts}>Reintentar</button>
+      </div>
+    )
+  }
+
   return (
     <section className="item-list-container">
       <h1 className="section-title">Catálogo de Productos</h1>
       
       <div className="category-filters">
-        <button 
-          className={`filter-btn ${selectedCategory === '' ? 'active' : ''}`}
-          onClick={() => setSelectedCategory('')}
+        <NavLink 
+          to="/productos" 
+          className={({ isActive }) => `filter-btn ${!categoryId && isActive ? 'active' : ''}`}
+          end
         >
           Todos
-        </button>
-        {categories.map(category => (
-          <button
-            key={category}
-            className={`filter-btn ${selectedCategory === category ? 'active' : ''}`}
-            onClick={() => setSelectedCategory(category)}
-          >
-            {categoryNames[category] || category}
-          </button>
-        ))}
+        </NavLink>
+        {categories.map(category => {
+          const label = categoryNames[category] || category
+          return (
+            <NavLink
+              key={category}
+              to={`/category/${category}`}
+              className={({ isActive }) => `filter-btn ${isActive ? 'active' : ''}`}
+            >
+              {label}
+            </NavLink>
+          )
+        })}
       </div>
       
-      {filteredProducts.length === 0 ? (
-        <div className="empty-state">
-          <p>No se encontraron productos en esta categoría.</p>
-        </div>
-      ) : (
-        <div className="item-grid">
-          {filteredProducts.map((product) => (
-            <ItemCard key={product.id} product={product} />
-          ))}
-        </div>
-      )}
+      <ItemList products={filteredProducts} />
     </section>
   )
 }

@@ -7,22 +7,37 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "firebase:serve": "firebase emulators:start",
+    "firebase:deploy": "firebase deploy",
+    "firebase:deploy:hosting": "firebase deploy --only hosting",
+    "firebase:deploy:functions": "firebase deploy --only functions",
+    "migrate:products": "node scripts/migrate-products.js",
+    "setup:firebase": "node scripts/setup-firebase.js",
+    "setup:credentials": "node scripts/setup-credentials.js",
+    "get:credentials": "node scripts/get-credentials.js",
+    "auto:setup": "node scripts/auto-setup.js",
+    "fetch:credentials": "node scripts/fetch-credentials.js",
+    "check:firestore": "node scripts/check-firestore.js",
+    "crear:env": "node scripts/crear-env-simple.js",
+    "firebase:init": "firebase login && firebase use center-gym-yacanto"
   },
   "dependencies": {
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
+    "firebase": "^11.1.0",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
     "react-router-dom": "^7.9.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@types/react": "^19.1.16",
-    "@types/react-dom": "^19.1.9",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.22",
     "globals": "^16.4.0",
+    "sass": "^1.97.2",
     "vite": "^7.1.7"
   }
 }

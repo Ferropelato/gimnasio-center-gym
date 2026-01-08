@@ -1,40 +1,44 @@
-import { useState, useRef } from 'react'
+import { memo, useCallback, useState } from 'react'
+import ItemCount from './ItemCount'
 
-function ItemDetail({ product, onAddToCart }) {
-  const [quantity, setQuantity] = useState(1)
-  const quantityInputRef = useRef(null)
+const ItemDetail = memo(function ItemDetail({ product, onAddToCart }) {
+  // TODOS LOS HOOKS DEBEN IR PRIMERO, antes de cualquier return condicional
+  const [itemAdded, setItemAdded] = useState(false)
 
-  const handleQuantityChange = (e) => {
-    const value = parseInt(e.target.value) || 1
-    if (value >= 1 && value <= product.stock) {
-      setQuantity(value)
+  const handleAddToCart = useCallback((quantity) => {
+    try {
+      if (onAddToCart && product) {
+        onAddToCart(product, quantity)
+        setItemAdded(true)
+      }
+    } catch (error) {
+      console.error('Error agregando al carrito:', error)
     }
+  }, [product, onAddToCart])
+
+  // Validar que product existe DESPUÉS de todos los hooks
+  if (!product) {
+    return (
+      <div className="error-container">
+        <p>Error: Producto no disponible</p>
+      </div>
+    )
   }
 
-  const handleIncrement = () => {
-    if (quantity < product.stock) {
-      setQuantity(quantity + 1)
-    }
-  }
-
-  const handleDecrement = () => {
-    if (quantity > 1) {
-      setQuantity(quantity - 1)
-    }
-  }
-
-  const handleAddToCart = () => {
-    onAddToCart(product, quantity)
-    setQuantity(1)
-  }
+  const stock = product.stock || 0
+  const price = product.price || 0
+  const image = product.image || '/vite.svg'
+  const name = product.name || 'Producto sin nombre'
+  const category = product.category || 'Sin categoría'
+  const description = product.description || 'Sin descripción'
 
   return (
     <div className="item-detail">
       <div className="item-detail__container">
         <div className="item-detail__image-section">
           <img 
-            src={product.image} 
-            alt={product.name}
+            src={image} 
+            alt={name}
             className="item-detail__image"
             onError={(e) => {
               e.currentTarget.onerror = null
@@ -44,64 +48,38 @@ function ItemDetail({ product, onAddToCart }) {
         </div>
         
         <div className="item-detail__info-section">
-          <h1 className="item-detail__title">{product.name}</h1>
-          <p className="item-detail__category">Categoría: {product.category}</p>
-          <p className="item-detail__price">${product.price.toLocaleString('es-AR')}</p>
+          <h1 className="item-detail__title">{name}</h1>
+          <p className="item-detail__category">Categoría: {category}</p>
+          <p className="item-detail__price">${price.toLocaleString('es-AR')}</p>
           
           <div className="item-detail__description">
             <h3>Descripción</h3>
-            <p>{product.description}</p>
+            <p>{description}</p>
           </div>
 
           <div className="item-detail__stock">
             <p>
-              {product.stock > 0 
-                ? `Disponible: ${product.stock} unidades` 
+              {stock > 0 
+                ? `Disponible: ${stock} unidades` 
                 : 'Sin stock disponible'}
             </p>
           </div>
 
-          {product.stock > 0 && (
+          {stock > 0 && !itemAdded && (
             <div className="item-detail__actions">
-              <div className="quantity-selector">
-                <button 
-                  className="quantity-btn" 
-                  onClick={handleDecrement}
-                  disabled={quantity <= 1}
-                >
-                  -
-                </button>
-                <input
-                  ref={quantityInputRef}
-                  type="number"
-                  min="1"
-                  max={product.stock}
-                  value={quantity}
-                  onChange={handleQuantityChange}
-                  className="quantity-input"
-                />
-                <button 
-                  className="quantity-btn" 
-                  onClick={handleIncrement}
-                  disabled={quantity >= product.stock}
-                >
-                  +
-                </button>
-              </div>
-              
-              <button 
-                className="add-to-cart-btn"
-                onClick={handleAddToCart}
-              >
-                Agregar al Carrito
-              </button>
+              <ItemCount stock={stock} onAdd={handleAddToCart} />
+            </div>
+          )}
+          {itemAdded && (
+            <div className="item-detail__added-message">
+              <p>✅ Producto agregado al carrito</p>
             </div>
           )}
         </div>
       </div>
     </div>
   )
-}
+})
 
 export default ItemDetail
 
